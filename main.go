@@ -41,7 +41,7 @@ func main () {
 		s, err := strconv.Atoi(stringSize)
 		sampleSize = &s
 		if err != nil {
-			logger.Fatal("[Error] error converting %s to integer: %s", stringSize, err)
+			logger.Fatalf("[Error] error converting %s to integer: %s", stringSize, err)
 		}
 	}
 
@@ -57,7 +57,7 @@ func main () {
 	file, err := os.Open(*filename)
 
 	if err != nil {
-		logger.Fatal("[Error] error opening %s: %s", *filename, err)
+		logger.Fatalf("[Error] error opening %s: %s", *filename, err)
 	}
 	defer file.Close()
 
