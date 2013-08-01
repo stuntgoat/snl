@@ -1,5 +1,6 @@
 // TODO: - help string for positional arguments
-// -
+// - streams
+// - split percentage of the data into train and test files
 
 package main
 
@@ -17,17 +18,17 @@ import (
 var logger *log.Logger
 var SAMPLE map[int]string
 var count int
-var pseudoRandom *rand.Rand
 
-
-func init () {
-	pseudoRandom = rand.New(rand.NewSource(time.Now().UnixNano()))
+func init() {
 	logger = log.New(os.Stderr, "[SNL] ", log.LstdFlags|log.Lshortfile)
+	SAMPLE = make(map[int]string)
+
 }
 
 func main () {
-	count_help := "The number of lines to sample from a file"
-	var sampleSize = flag.Int("count", 0, count_help)
+	rand.Seed(time.Now().UTC().UnixNano())
+	sample_size_help := "The number of lines to sample from a file"
+	var sampleSize = flag.Int("sample_size", 0, sample_size_help)
 
 	filename_help := "The file which to sample from"
 	var filename = flag.String("file", "", filename_help)
@@ -60,17 +61,37 @@ func main () {
 	}
 	defer file.Close()
 
+	// TODO: - for streams,
 	// we need to store the first `count` items from the file in a hash or circular buffer
 	// then we replace lines at random in something that ends up being a random
 	// distribution
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		if count == *sampleSize {
-			os.Exit(0)
-		}
+		// for files
 		// randomly store this line after first collecting the first `sampleSize` items
-		fmt.Println(scanner.Text())
+		SAMPLE[count] = fmt.Sprint(scanner.Text())
 		count++
 	}
+
+	// a log of which line numbers we have seen
+	seen := make(map[int]bool)
+
+	var candidate int
+	var done int
+	for {
+		candidate = rand.Intn(count)
+
+		// if we haven't seen this before, print to stdout
+		if seen[candidate] != true {
+			fmt.Println(SAMPLE[candidate])
+			seen[candidate] = true
+			done++
+		}
+		if done == *sampleSize {
+			goto DONE
+		}
+	}
+DONE:
+	os.Exit(0)
 }
