@@ -1,11 +1,11 @@
 `snl`
 ===
 
-Sample N number of Lines from a file.
+Sample N number or percentage of Lines from a file.
 
 Usage:
 
-        $ snl <sample size> <file path>
+        $ snl [[sample size]&] [file path]
 
 I thought it would be fun to write a BASH script to return random lines from a file. Turns out that people have already written one-liners to return one line from a file as written here:
 
@@ -21,5 +21,5 @@ Install:
 
 TODO:
 
-      - return random lines from a stream
       - manpage
+      - tests
