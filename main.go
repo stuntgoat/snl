@@ -65,7 +65,6 @@ func keepPercentage() {
 	if mustDelete == 0 {
 		return
 	}
-	fmt.Println("mustDelete", mustDelete)
 	var candidate int
 	for  {
 		candidate = rand.Intn(CURRENT_COUNT)
@@ -115,7 +114,6 @@ func main() {
 		CURRENT_COUNT++
 
 		if CURRENT_COUNT % 300 == 0 {
-			logger.Println(CURRENT_COUNT)
 			keepPercentage()
 		}
 	}
