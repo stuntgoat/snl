@@ -1,125 +1,125 @@
 package main
 
+
 import (
 	"fmt"
 	"flag"
 	"bufio"
 	"log"
 	"os"
+	"os/signal"
 	"math/rand"
+
 	"strconv"
 	"time"
 )
 
-
-var SAMPLE_TYPE int
-const (
-	INTEGER = iota
-	PERCENTAGE
-	)
-
+var CANDIDATE int
+var MUST_KEEP int
 var SAMPLE_MAP map[int]string
-var SAMPLE_VALUE int // either a percentage or an integer value
-
-var command = os.Args[0]
-var invocation = fmt.Sprintf("%s [[sample size]%%] [file path]\n", command)
+var SAMPLE_VALUE int
+var SAMPLE_PERCENTAGE float64
+var CURRENT_COUNT int
 
 var logger *log.Logger
 
-// flag.Usage help message override
+var command = os.Args[0]
+var invocation = fmt.Sprintf("%s [sample percentage] -\n", command)
+
 var Usage = func() {
 	fmt.Fprintf(os.Stderr, "Usage: %s", invocation)
 }
 
+func parseValue(s string) int {
+	var value string
+
+	// convert value to integer
+	intValue, err := strconv.Atoi(s)
+	if err != nil {
+		logger.Printf("[Error] error converting sample_size: %s to integer: %s", value, err)
+		fmt.Printf("Usage: %s", invocation)
+		os.Exit(1)
+	}
+	return intValue
+}
+
 func init() {
-	logger = log.New(os.Stderr, "[SNL] ", log.LstdFlags|log.Lshortfile)
+	logger = log.New(os.Stderr, "[snls] ", log.LstdFlags|log.Lshortfile)
+
 	SAMPLE_MAP = make(map[int]string)
+
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	flag.Usage = Usage
 	flag.Parse()
 }
 
-// parseValue determines if the value is a percentage or
-// an integer, and sets the global value `SAMPLE_VALUE`,
-func parseValue(s string) {
-	var value string
-	if string(s[len(s) - 1]) == "%" {
-		SAMPLE_TYPE = PERCENTAGE
-		value = s[:len(s)-1]
-	} else {
-		SAMPLE_TYPE = INTEGER
-		value = s
+func keepPercentage() {
+	MUST_KEEP = int(SAMPLE_PERCENTAGE * float64(CURRENT_COUNT))
+	if MUST_KEEP == 0 {
+		os.Exit(0)
 	}
 
-	// convert value to integer
-	intValue, err := strconv.Atoi(value)
-	if err != nil {
-		logger.Printf("[Error] error converting sample_size: %s to integer: %s", value, err)
-		fmt.Printf("Usage: %s", invocation)
-		os.Exit(1)
+	// calculate a safe threshold to randomly remove from the map
+	mustDelete := len(SAMPLE_MAP) - MUST_KEEP
+	if mustDelete == 0 {
+		return
 	}
-	SAMPLE_VALUE = intValue
+	fmt.Println("mustDelete", mustDelete)
+	var candidate int
+	for  {
+		candidate = rand.Intn(CURRENT_COUNT)
+		_, exists := SAMPLE_MAP[candidate]
+
+		if exists {
+			delete(SAMPLE_MAP, candidate)
+			mustDelete--
+		}
+		if mustDelete == 0 {
+			break
+		}
+	}
 }
 
-// parseFile validates a string and returns an *os.File
-func parseFile(s string) (file *os.File){
-	if s == "" {
-		logger.Print("[Error] missing filename argument")
-		fmt.Printf("Usage: %s", invocation)
-		os.Exit(1)
+func printFinal() {
+	for _, line := range SAMPLE_MAP {
+		fmt.Println(line)
 	}
 
-	file, err := os.Open(s)
-	if err != nil {
-		logger.Fatalf("[Error] error opening %s: %s", s, err)
-	}
-
-	return file
+	os.Exit(0)
 }
 
-func main () {
-	var count int // a count of how many lines have been collected
-	var candidate int // tmp variable for choosing a random number
-	var done int // number of lines printed so far
-	var totalOut int // number of total lines to print after calling parseValue
+func handleSignal() {
+	sigChannel := make(chan os.Signal, 1)
+	signal.Notify(sigChannel, os.Interrupt)
+	<- sigChannel
 
-	sampleSize := flag.Arg(0)
-	parseValue(sampleSize)
+	keepPercentage()
 
-	fileName := flag.Arg(1)
+	printFinal()
+}
 
-	file := parseFile(fileName)
-	defer file.Close()
+func main() {
+	sizeRequest := flag.Arg(0)
 
-	scanner := bufio.NewScanner(file)
+	SAMPLE_VALUE := parseValue(sizeRequest)
+	SAMPLE_PERCENTAGE = float64(SAMPLE_VALUE) / 100.0
+
+	SAMPLE_MAP = make(map[int]string)
+
+	go handleSignal()
+
+	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
-		// store all lines in a map with a line number index
-		SAMPLE_MAP[count] = fmt.Sprint(scanner.Text())
-		count++
-	}
+		SAMPLE_MAP[CURRENT_COUNT] = fmt.Sprint(scanner.Text())
+		CURRENT_COUNT++
 
-	// a log of which line numbers we have seen
-	seen := make(map[int]bool)
-
-	// calulate the number of values we need to print to stdout
-	if SAMPLE_TYPE == INTEGER {
-		totalOut = SAMPLE_VALUE
-	} else if SAMPLE_TYPE == PERCENTAGE {
-		totalOut = int((float64(SAMPLE_VALUE) / 100.0) * float64(count))
-	}
-
-	for {
-		candidate = rand.Intn(count)
-
-		// if we haven't printed this line before, print to stdout
-		if seen[candidate] != true {
-			fmt.Println(SAMPLE_MAP[candidate])
-			seen[candidate] = true
-			done++
-		}
-		if done == totalOut {
-			os.Exit(0)
+		if CURRENT_COUNT % 300 == 0 {
+			logger.Println(CURRENT_COUNT)
+			keepPercentage()
 		}
 	}
+	keepPercentage()
+
+	printFinal()
 }
