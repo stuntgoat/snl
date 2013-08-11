@@ -99,7 +99,7 @@ func forgetOrReplace(sample []string, count, threshold int, value string){
 	}
 }
 
-
+// prints the global SAMPLE
 func printSample() {
 	for _, line := range SAMPLE {
 		fmt.Println(line)
@@ -108,12 +108,29 @@ func printSample() {
 
 
 type PercentageSample struct {
-	total []string
-	percentage float64
+	sample []string // actual sample from all lines seen
+	percentageKeep float64 // the percentage of all samples to keep
+	well []string // the maximum size of the elements to take samples from
+	wellSize int
+	totalSeen int // the total number of lines seen
 }
 
-// add saved values to array
-func (container *PercentageSample) addPercentageToTotal(sample []string) {
+
+// implements the  "Algorithm 235: Random permutation" by Richard Durstenfeld.
+// http://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
+func (percentSample *PercentageSample) shuffleAlgorithm235() {
+	var choice int
+	var old string
+	for i := percentSample.wellSize - 1; i > 1; i-- {
+		choice = rand.Intn(i)
+		old = percentSample[i]
+		percentSample[i] = percentSample[choice]
+		percentSample[choice] = old
+	}
+}
+
+// add number of shuffled samples from the well to the sample.
+func (percentageSample *PercentageSample) addPercentageToTotal(sample []string) {
 
 }
 
@@ -143,8 +160,7 @@ func main () {
 	} else if SAMPLE_TYPE == PERCENTAGE {
 		// create a PercentageSample object and set it's percentage
 
-		// make sample a defualt size of 100
-
+		// make sample a default size of 100
 
 	}
 
