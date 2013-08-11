@@ -82,7 +82,7 @@ func parseFile(s string) (file *os.File) {
 // keepPercentage returns a function that closes over
 // an argument that represents a percentage. The function it returns
 // accepts a count and it returns.
-func keepPercentage(percentage float64) (fn func(int) int){
+func keepPercentage(percentage float64) (fn func(int) int) {
 	return func(count int) int {
 		return int(percentage * float64(count))
 	}
@@ -106,6 +106,31 @@ func printSample() {
 	}
 }
 
+
+type PercentageSample struct {
+	total []string
+	percentage float64
+}
+
+// add saved values to array
+func (container *PercentageSample) addPercentageToTotal(sample []string) {
+
+}
+
+
+func handleSignal() {
+	sigChannel := make(chan os.Signal, 1)
+	signal.Notify(sigChannel, os.Interrupt)
+	<- sigChannel
+
+	// check if this is a percentage or integer sample
+
+
+	keepPercentage()
+
+	printSample()
+}
+
 func main () {
 
 	var file *os.File
@@ -116,7 +141,11 @@ func main () {
 	if SAMPLE_TYPE == INTEGER {
 		SAMPLE = make([]string, SAMPLE_VALUE)
 	} else if SAMPLE_TYPE == PERCENTAGE {
-		// make a default size to collect
+		// create a PercentageSample object and set it's percentage
+
+		// make sample a defualt size of 100
+
+
 	}
 
 	fileName := flag.Arg(1)
@@ -133,7 +162,9 @@ func main () {
 		line = fmt.Sprint(scanner.Text())
 
 		if SAMPLE_TYPE == PERCENTAGE {
+			// collect the number of values
 
+			// call collect at each threshold to siphon samples to objec
 			logger.Println("percentage sampling not implemented yet")
 			os.Exit(0)
 		}
