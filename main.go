@@ -18,8 +18,9 @@ const (
 	PERCENTAGE
 	)
 
-var SAMPLE_MAP map[int]string
-var SAMPLE_VALUE int // either a percentage or an integer value
+var COUNT int // a count of how many lines have been collected
+var SAMPLE = make([]string, 0)
+var SAMPLE_VALUE int // either a percentage or a sum to keep
 
 var command = os.Args[0]
 var invocation = fmt.Sprintf("%s [[sample size]%%] [file path]\n", command)
@@ -33,7 +34,6 @@ var Usage = func() {
 
 func init() {
 	logger = log.New(os.Stderr, "[SNL] ", log.LstdFlags|log.Lshortfile)
-	SAMPLE_MAP = make(map[int]string)
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	flag.Usage = Usage
@@ -63,7 +63,7 @@ func parseValue(s string) {
 }
 
 // parseFile validates a string and returns an *os.File
-func parseFile(s string) (file *os.File){
+func parseFile(s string) (file *os.File) {
 	if s == "" {
 		logger.Print("[Error] missing filename argument")
 		fmt.Printf("Usage: %s", invocation)
@@ -78,48 +78,72 @@ func parseFile(s string) (file *os.File){
 	return file
 }
 
+
+// keepPercentage returns a function that closes over
+// an argument that represents a percentage. The function it returns
+// accepts a count and it returns.
+func keepPercentage(percentage float64) (fn func(int) int){
+	return func(count int) int {
+		return int(percentage * float64(count))
+	}
+}
+
+// forgetOrReplace will choose a number, N, between
+// 0 and count, if N is >= threshold we return the sample;
+// if N is < len(`sample`) we replace it with `value`
+func forgetOrReplace(sample []string, count, threshold int, value string){
+	var candidate = rand.Intn(count)
+
+	if candidate < threshold {
+		sample[candidate] = value
+	}
+}
+
+
+func printSample() {
+	for _, line := range SAMPLE {
+		fmt.Println(line)
+	}
+}
+
 func main () {
-	var count int // a count of how many lines have been collected
-	var candidate int // tmp variable for choosing a random number
-	var done int // number of lines printed so far
-	var totalOut int // number of total lines to print after calling parseValue
+
+	var file *os.File
 
 	sampleSize := flag.Arg(0)
 	parseValue(sampleSize)
 
+	if SAMPLE_TYPE == INTEGER {
+		SAMPLE = make([]string, SAMPLE_VALUE)
+	} else if SAMPLE_TYPE == PERCENTAGE {
+		// make a default size to collect
+	}
+
 	fileName := flag.Arg(1)
+	if fileName == "-" {
+		file = os.Stdin
+	} else {
+		file = parseFile(fileName)
+		defer file.Close()
+	}
 
-	file := parseFile(fileName)
-	defer file.Close()
-
+	var line string
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		// store all lines in a map with a line number index
-		SAMPLE_MAP[count] = fmt.Sprint(scanner.Text())
-		count++
-	}
+		line = fmt.Sprint(scanner.Text())
 
-	// a log of which line numbers we have seen
-	seen := make(map[int]bool)
+		if SAMPLE_TYPE == PERCENTAGE {
 
-	// calulate the number of values we need to print to stdout
-	if SAMPLE_TYPE == INTEGER {
-		totalOut = SAMPLE_VALUE
-	} else if SAMPLE_TYPE == PERCENTAGE {
-		totalOut = int((float64(SAMPLE_VALUE) / 100.0) * float64(count))
-	}
-
-	for {
-		candidate = rand.Intn(count)
-
-		// if we haven't printed this line before, print to stdout
-		if seen[candidate] != true {
-			fmt.Println(SAMPLE_MAP[candidate])
-			seen[candidate] = true
-			done++
-		}
-		if done == totalOut {
+			logger.Println("percentage sampling not implemented yet")
 			os.Exit(0)
 		}
+
+		if COUNT < SAMPLE_VALUE {
+			SAMPLE[COUNT] = line
+		} else {
+			forgetOrReplace(SAMPLE, COUNT, SAMPLE_VALUE, line)
+		}
+		COUNT++
 	}
+	printSample()
 }
