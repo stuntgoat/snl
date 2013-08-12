@@ -25,13 +25,14 @@ var PERCENT_SAMPLE *PercentageSample
 var SAMPLE_VALUE int // either a percentage or a sum to keep
 
 var command = os.Args[0]
-var invocation = fmt.Sprintf("%s [[sample size]%%] [file path]\n", command)
+var invocationFile = fmt.Sprintf("%s [[sample size]%%] [file path]\n", command)
+var invocationStdin = fmt.Sprintf("%s [[sample size]%%] -\n", command)
 
 var logger *log.Logger
 
 // flag.Usage help message override
 var Usage = func() {
-	fmt.Fprintf(os.Stderr, "Usage: %s", invocation)
+	fmt.Fprintf(os.Stderr, "Usage:\n%s%s", invocationFile, invocationStdin)
 }
 
 func init() {
@@ -54,11 +55,10 @@ func parseValue(s string) {
 		value = s
 	}
 
-	// convert value to integer
 	intValue, err := strconv.Atoi(value)
 	if err != nil {
 		logger.Printf("[Error] error converting sample_size: %s to integer: %s", value, err)
-		fmt.Printf("Usage: %s", invocation)
+		Usage()
 		os.Exit(1)
 	}
 	SAMPLE_VALUE = intValue
@@ -68,12 +68,13 @@ func parseValue(s string) {
 func parseFile(s string) (file *os.File) {
 	if s == "" {
 		logger.Print("[Error] missing filename argument")
-		fmt.Printf("Usage: %s", invocation)
+		Usage()
 		os.Exit(1)
 	}
 
 	file, err := os.Open(s)
 	if err != nil {
+		Usage()
 		logger.Fatalf("[Error] error opening %s: %s", s, err)
 	}
 
@@ -91,6 +92,8 @@ func forgetOrReplace(sample []string, count, threshold int, value string) {
 	}
 }
 
+// PercentageSample is an object that is used for sampling a
+// percentage of lines.
 type PercentageSample struct {
 	sample []string // actual sample from all lines seen
 	percentageKeep int // the percentage of all samples to keep
@@ -137,6 +140,9 @@ func (sample *PercentageSample) sampleLine(line string, count int) {
 	sample.wellSeen++
 }
 
+
+// handleSignal handles a SIGINT (control-c) when the user
+// might want to break from a stream while sampling a percentage.
 func handleSignal() {
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt)
@@ -158,12 +164,11 @@ func printSample() {
 	}
 }
 
-
-
 func main () {
 	var file *os.File
+	var line string
 
-	sampleSize := flag.Arg(0)
+	var sampleSize = flag.Arg(0)
 	parseValue(sampleSize)
 
 	if SAMPLE_TYPE == INTEGER {
@@ -186,7 +191,8 @@ func main () {
 		defer file.Close()
 	}
 
-	var line string
+	go handleSignal()
+
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line = fmt.Sprint(scanner.Text())
