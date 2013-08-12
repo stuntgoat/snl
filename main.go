@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"os/signal"
 	"math/rand"
 	"strconv"
 	"time"
@@ -19,7 +20,8 @@ const (
 	)
 
 var COUNT int // a count of how many lines have been collected
-var SAMPLE = make([]string, 0)
+var SAMPLE_INTEGER []string
+var PERCENT_SAMPLE *PercentageSample
 var SAMPLE_VALUE int // either a percentage or a sum to keep
 
 var command = os.Args[0]
@@ -78,20 +80,10 @@ func parseFile(s string) (file *os.File) {
 	return file
 }
 
-
-// keepPercentage returns a function that closes over
-// an argument that represents a percentage. The function it returns
-// accepts a count and it returns.
-func keepPercentage(percentage float64) (fn func(int) int) {
-	return func(count int) int {
-		return int(percentage * float64(count))
-	}
-}
-
 // forgetOrReplace will choose a number, N, between
 // 0 and count, if N is >= threshold we return the sample;
 // if N is < len(`sample`) we replace it with `value`
-func forgetOrReplace(sample []string, count, threshold int, value string){
+func forgetOrReplace(sample []string, count, threshold int, value string) {
 	var candidate = rand.Intn(count)
 
 	if candidate < threshold {
@@ -99,69 +91,91 @@ func forgetOrReplace(sample []string, count, threshold int, value string){
 	}
 }
 
-// prints the global SAMPLE
-func printSample() {
-	for _, line := range SAMPLE {
-		fmt.Println(line)
-	}
-}
-
-
 type PercentageSample struct {
 	sample []string // actual sample from all lines seen
-	percentageKeep float64 // the percentage of all samples to keep
+	percentageKeep int // the percentage of all samples to keep
 	well []string // the maximum size of the elements to take samples from
 	wellSize int
-	totalSeen int // the total number of lines seen
+	wellSeen int // the total number of new lines in well
+	keep int
 }
-
 
 // implements the  "Algorithm 235: Random permutation" by Richard Durstenfeld.
 // http://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
 func (percentSample *PercentageSample) shuffleAlgorithm235() {
 	var choice int
 	var old string
-	for i := percentSample.wellSize - 1; i > 1; i-- {
+	for i := percentSample.wellSeen - 1; i > 1; i-- {
 		choice = rand.Intn(i)
-		old = percentSample[i]
-		percentSample[i] = percentSample[choice]
-		percentSample[choice] = old
+		old = percentSample.well[i]
+		percentSample.well[i] = percentSample.well[choice]
+		percentSample.well[choice] = old
 	}
 }
 
 // add number of shuffled samples from the well to the sample.
-func (percentageSample *PercentageSample) addPercentageToTotal(sample []string) {
-
+func (sample *PercentageSample) addPercentageToTotal() {
+	sample.shuffleAlgorithm235()
+	sample.keep = int((float64(sample.percentageKeep) / 100.0) * float64(sample.wellSeen))
+	for i := 0; i < sample.keep; i++ {
+		sample.sample = append(sample.sample, sample.well[i])
+	}
 }
 
+// sampleLine is a method that incrementally collects a percentage of all
+// samples seen.
+func (sample *PercentageSample) sampleLine(line string, count int) {
+	if count > 0 && count % sample.wellSize == 0 {
+		// add samples from well
+		sample.addPercentageToTotal()
+
+		// restart sampling
+		sample.wellSeen = 0
+		sample.well = make([]string, 0)
+	}
+	sample.well = append(sample.well, line)
+	sample.wellSeen++
+}
 
 func handleSignal() {
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt)
 	<- sigChannel
 
-	// check if this is a percentage or integer sample
-
-
-	keepPercentage()
-
 	printSample()
 }
 
-func main () {
+func printSample() {
+	if SAMPLE_TYPE == PERCENTAGE {
+		PERCENT_SAMPLE.addPercentageToTotal()
+		for _, line := range PERCENT_SAMPLE.sample {
+			fmt.Println(line)
+		}
+	} else {
+		for _, line := range SAMPLE_INTEGER {
+			fmt.Println(line)
+		}
+	}
+}
 
+
+
+func main () {
 	var file *os.File
 
 	sampleSize := flag.Arg(0)
 	parseValue(sampleSize)
 
 	if SAMPLE_TYPE == INTEGER {
-		SAMPLE = make([]string, SAMPLE_VALUE)
+		SAMPLE_INTEGER = make([]string, SAMPLE_VALUE)
 	} else if SAMPLE_TYPE == PERCENTAGE {
-		// create a PercentageSample object and set it's percentage
-
-		// make sample a default size of 100
-
+		PERCENT_SAMPLE = &PercentageSample{
+			sample: make([]string, 0),
+			percentageKeep: SAMPLE_VALUE,
+			well:  make([]string, 0),
+			wellSize: 100,
+			wellSeen: 0,
+		}
 	}
 
 	fileName := flag.Arg(1)
@@ -178,17 +192,13 @@ func main () {
 		line = fmt.Sprint(scanner.Text())
 
 		if SAMPLE_TYPE == PERCENTAGE {
-			// collect the number of values
-
-			// call collect at each threshold to siphon samples to objec
-			logger.Println("percentage sampling not implemented yet")
-			os.Exit(0)
-		}
-
-		if COUNT < SAMPLE_VALUE {
-			SAMPLE[COUNT] = line
+			PERCENT_SAMPLE.sampleLine(line, COUNT)
 		} else {
-			forgetOrReplace(SAMPLE, COUNT, SAMPLE_VALUE, line)
+			if COUNT < SAMPLE_VALUE {
+				SAMPLE_INTEGER[COUNT] = line
+			} else {
+				forgetOrReplace(SAMPLE_INTEGER, COUNT, SAMPLE_VALUE, line)
+			}
 		}
 		COUNT++
 	}
