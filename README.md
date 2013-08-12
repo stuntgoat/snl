@@ -1,11 +1,12 @@
 `snl`
 ===
 
-Sample N number or percentage of Lines from a file.
+Sample N number or percentage of Lines from a file or STDIN.
 
 Usage:
 
         $ snl [[sample size]%] [file path]
+        $ snl [[sample size]%] -
 
 I thought it would be fun to write a BASH script to return random lines from a file. Turns out that people have already written one-liners to return one line from a file as written here:
 
@@ -20,6 +21,7 @@ Install:
         $ go install github.com/stuntgoat/snl
 
 TODO:
-
-      - manpage
+      - move PercentageSample object to separate package
+      - possibly create a separate IntegerSample package
       - tests
+      - manpage
