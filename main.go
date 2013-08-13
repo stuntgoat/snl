@@ -12,19 +12,20 @@ import (
 	"time"
 
 	"github.com/stuntgoat/snl/percent_sample"
+	"github.com/stuntgoat/snl/integer_sample"
 )
 
 
+var SAMPLE_VALUE int // either a percentage or a sum to keep
 var SAMPLE_TYPE int
+
 const (
 	INTEGER = iota
 	PERCENTAGE
 	)
 
-var COUNT int // a count of how many lines have been collected
-var SAMPLE_INTEGER []string
+var INTEGER_SAMPLE *integer_sample.IntegerSample
 var PERCENT_SAMPLE *percent_sample.PercentageSample
-var SAMPLE_VALUE int // either a percentage or a sum to keep
 
 var command = os.Args[0]
 var invocationFile = fmt.Sprintf("%s [[sample size]%%] [file path]\n", command)
@@ -83,17 +84,6 @@ func parseFile(s string) (file *os.File) {
 	return file
 }
 
-// forgetOrReplace will choose a number, N, between
-// 0 and count, if N is >= threshold we return the sample;
-// if N is < len(`sample`) we replace it with `value`
-func forgetOrReplace(sample []string, count, threshold int, value string) {
-	var candidate = rand.Intn(count)
-
-	if candidate < threshold {
-		sample[candidate] = value
-	}
-}
-
 // handleSignal handles a SIGINT (control-c) when the user
 // might want to break from a stream while sampling a percentage.
 func handleSignal() {
@@ -107,13 +97,9 @@ func handleSignal() {
 func printSample() {
 	if SAMPLE_TYPE == PERCENTAGE {
 		PERCENT_SAMPLE.AddPercentageToTotal()
-		for _, line := range PERCENT_SAMPLE.Sample {
-			fmt.Println(line)
-		}
+		PERCENT_SAMPLE.Print()
 	} else {
-		for _, line := range SAMPLE_INTEGER {
-			fmt.Println(line)
-		}
+		INTEGER_SAMPLE.Print()
 	}
 }
 
@@ -125,7 +111,10 @@ func main () {
 	parseValue(sampleSize)
 
 	if SAMPLE_TYPE == INTEGER {
-		SAMPLE_INTEGER = make([]string, SAMPLE_VALUE)
+		INTEGER_SAMPLE = &integer_sample.IntegerSample{
+			Sample: make([]string, SAMPLE_VALUE),
+			Size: SAMPLE_VALUE,
+		}
 	} else if SAMPLE_TYPE == PERCENTAGE {
 		PERCENT_SAMPLE = &percent_sample.PercentageSample{
 			Sample: make([]string, 0),
@@ -151,15 +140,10 @@ func main () {
 		line = fmt.Sprint(scanner.Text())
 
 		if SAMPLE_TYPE == PERCENTAGE {
-			PERCENT_SAMPLE.SampleLine(line, COUNT)
+			PERCENT_SAMPLE.SampleLine(line)
 		} else {
-			if COUNT < SAMPLE_VALUE {
-				SAMPLE_INTEGER[COUNT] = line
-			} else {
-				forgetOrReplace(SAMPLE_INTEGER, COUNT, SAMPLE_VALUE, line)
-			}
+			INTEGER_SAMPLE.SampleLine(line)
 		}
-		COUNT++
 	}
 	printSample()
 }

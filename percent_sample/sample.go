@@ -2,6 +2,7 @@ package percent_sample
 
 
 import (
+	"fmt"
 	"math/rand"
 )
 
@@ -14,7 +15,15 @@ type PercentageSample struct {
 	WellSize int
 	WellSeen int // the total number of new lines in well
 	keep int
+	count int
 }
+
+func (sample *PercentageSample) Print() {
+	for _, line := range sample.Sample {
+		fmt.Println(line)
+	}
+}
+
 
 // implements the  "Algorithm 235: Random permutation" by Richard Durstenfeld.
 // http://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
@@ -40,8 +49,8 @@ func (sample *PercentageSample) AddPercentageToTotal() {
 
 // sampleLine is a method that incrementally collects a percentage of all
 // samples seen.
-func (sample *PercentageSample) SampleLine(line string, count int) {
-	if count > 0 && count % sample.WellSize == 0 {
+func (sample *PercentageSample) SampleLine(line string) {
+	if sample.count > 0 && sample.count % sample.WellSize == 0 {
 		// add samples from well
 		sample.AddPercentageToTotal()
 
@@ -51,4 +60,5 @@ func (sample *PercentageSample) SampleLine(line string, count int) {
 	}
 	sample.Well = append(sample.Well, line)
 	sample.WellSeen++
+	sample.count++
 }
