@@ -21,7 +21,6 @@ Install:
         $ go install github.com/stuntgoat/snl
 
 TODO:
-      - move PercentageSample object to separate package
-      - possibly create a separate IntegerSample package
+
       - tests
       - manpage
