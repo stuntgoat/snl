@@ -1,15 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"flag"
-	"bufio"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
-	"math/rand"
 	"strconv"
 	"time"
+
+	"github.com/stuntgoat/snl/percent_sample"
 )
 
 
@@ -21,7 +23,7 @@ const (
 
 var COUNT int // a count of how many lines have been collected
 var SAMPLE_INTEGER []string
-var PERCENT_SAMPLE *PercentageSample
+var PERCENT_SAMPLE *percent_sample.PercentageSample
 var SAMPLE_VALUE int // either a percentage or a sum to keep
 
 var command = os.Args[0]
@@ -92,55 +94,6 @@ func forgetOrReplace(sample []string, count, threshold int, value string) {
 	}
 }
 
-// PercentageSample is an object that is used for sampling a
-// percentage of lines.
-type PercentageSample struct {
-	sample []string // actual sample from all lines seen
-	percentageKeep int // the percentage of all samples to keep
-	well []string // the maximum size of the elements to take samples from
-	wellSize int
-	wellSeen int // the total number of new lines in well
-	keep int
-}
-
-// implements the  "Algorithm 235: Random permutation" by Richard Durstenfeld.
-// http://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
-func (percentSample *PercentageSample) shuffleAlgorithm235() {
-	var choice int
-	var old string
-	for i := percentSample.wellSeen - 1; i > 1; i-- {
-		choice = rand.Intn(i)
-		old = percentSample.well[i]
-		percentSample.well[i] = percentSample.well[choice]
-		percentSample.well[choice] = old
-	}
-}
-
-// add number of shuffled samples from the well to the sample.
-func (sample *PercentageSample) addPercentageToTotal() {
-	sample.shuffleAlgorithm235()
-	sample.keep = int((float64(sample.percentageKeep) / 100.0) * float64(sample.wellSeen))
-	for i := 0; i < sample.keep; i++ {
-		sample.sample = append(sample.sample, sample.well[i])
-	}
-}
-
-// sampleLine is a method that incrementally collects a percentage of all
-// samples seen.
-func (sample *PercentageSample) sampleLine(line string, count int) {
-	if count > 0 && count % sample.wellSize == 0 {
-		// add samples from well
-		sample.addPercentageToTotal()
-
-		// restart sampling
-		sample.wellSeen = 0
-		sample.well = make([]string, 0)
-	}
-	sample.well = append(sample.well, line)
-	sample.wellSeen++
-}
-
-
 // handleSignal handles a SIGINT (control-c) when the user
 // might want to break from a stream while sampling a percentage.
 func handleSignal() {
@@ -153,8 +106,8 @@ func handleSignal() {
 
 func printSample() {
 	if SAMPLE_TYPE == PERCENTAGE {
-		PERCENT_SAMPLE.addPercentageToTotal()
-		for _, line := range PERCENT_SAMPLE.sample {
+		PERCENT_SAMPLE.AddPercentageToTotal()
+		for _, line := range PERCENT_SAMPLE.Sample {
 			fmt.Println(line)
 		}
 	} else {
@@ -174,12 +127,12 @@ func main () {
 	if SAMPLE_TYPE == INTEGER {
 		SAMPLE_INTEGER = make([]string, SAMPLE_VALUE)
 	} else if SAMPLE_TYPE == PERCENTAGE {
-		PERCENT_SAMPLE = &PercentageSample{
-			sample: make([]string, 0),
-			percentageKeep: SAMPLE_VALUE,
-			well:  make([]string, 0),
-			wellSize: 100,
-			wellSeen: 0,
+		PERCENT_SAMPLE = &percent_sample.PercentageSample{
+			Sample: make([]string, 0),
+			PercentageKeep: SAMPLE_VALUE,
+			Well:  make([]string, 0),
+			WellSize: 100,
+			WellSeen: 0,
 		}
 	}
 
@@ -198,7 +151,7 @@ func main () {
 		line = fmt.Sprint(scanner.Text())
 
 		if SAMPLE_TYPE == PERCENTAGE {
-			PERCENT_SAMPLE.sampleLine(line, COUNT)
+			PERCENT_SAMPLE.SampleLine(line, COUNT)
 		} else {
 			if COUNT < SAMPLE_VALUE {
 				SAMPLE_INTEGER[COUNT] = line
