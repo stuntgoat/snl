@@ -1,10 +1,10 @@
 package percent_sample
 
-
 import (
 	"fmt"
 	"math/rand"
 )
+
 
 // PercentageSample is an object that is used for sampling a
 // percentage of lines.
@@ -24,8 +24,7 @@ func (sample *PercentageSample) Print() {
 	}
 }
 
-
-// implements the  "Algorithm 235: Random permutation" by Richard Durstenfeld.
+// shuffleAlgothithm235 implements the  "Algorithm 235: Random permutation" by Richard Durstenfeld.
 // http://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
 func (sample *PercentageSample) shuffleAlgorithm235() {
 	var choice int
