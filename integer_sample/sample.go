@@ -5,6 +5,7 @@ import (
 	"math/rand"
 )
 
+
 type IntegerSample struct {
 	Sample []string
 	Size int
