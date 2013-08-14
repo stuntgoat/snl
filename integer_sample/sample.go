@@ -19,9 +19,10 @@ func (sample *IntegerSample) Print() {
 	}
 }
 
-// SampleLine performs a classic 'resevoir sample`.
-// Choose a number, N, between 0 and , if N is >=  we return;
-// if N is < len(`sample`) we replace it with `value`
+// SampleLine performs a classic 'resevoir sample'.
+// Choose a number, N, between 0 and , if N is >= sample.Size
+// we return; if N is < sample.Size we replace it with `line` at
+// the Nth index of sample.Sample.
 func (sample *IntegerSample) SampleLine(line string) {
 
 	if sample.count < sample.Size {
