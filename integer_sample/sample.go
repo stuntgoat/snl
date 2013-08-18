@@ -5,8 +5,7 @@ import (
 	"math/rand"
 )
 
-
-type IntegerSample struct {
+type Sample struct {
 	Sample []string
 	Size int
 	candidate int
@@ -14,17 +13,17 @@ type IntegerSample struct {
 }
 
 // Print prints the values of the sample to STDOUT.
-func (sample *IntegerSample) Print() {
+func (sample *Sample) Print() {
 	for _, line := range sample.Sample {
 		fmt.Println(line)
 	}
 }
 
-// SampleLine performs a classic 'resevoir sample'.
-// Choose a number, N, between 0 and , if N is >= sample.Size
-// we return; if N is < sample.Size we replace it with `line` at
-// the Nth index of sample.Sample.
-func (sample *IntegerSample) SampleLine(line string) {
+
+// SampleLine performs a classic 'resevoir sample`.
+// Choose a number, N, between 0 and , if N is >=  we return;
+// if N is < len(`sample`) we replace it with `value`
+func (sample *Sample) SampleLine(line string) {
 
 	if sample.count < sample.Size {
 		goto ADD_SAMPLE
@@ -32,11 +31,12 @@ func (sample *IntegerSample) SampleLine(line string) {
 
 	sample.candidate = rand.Intn(sample.count)
 	if sample.candidate < sample.Size {
+
 		sample.Sample[sample.candidate] = line
 		goto INCREMENT_COUNT
 	}
 
-	return
+	goto INCREMENT_COUNT
 
 ADD_SAMPLE:
 	sample.Sample[sample.count] = line
