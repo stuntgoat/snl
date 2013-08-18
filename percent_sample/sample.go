@@ -5,10 +5,9 @@ import (
 	"math/rand"
 )
 
-
-// PercentageSample is an object that is used for sampling a
+// Sample is an object that is used for sampling a
 // percentage of lines.
-type PercentageSample struct {
+type Sample struct {
 	Sample []string // actual sample from all lines seen
 	PercentageKeep int // the percentage of all samples to keep
 	Well []string // the maximum size of the elements to take samples from
@@ -18,27 +17,34 @@ type PercentageSample struct {
 	count int
 }
 
-func (sample *PercentageSample) Print() {
+func (sample *Sample) Print() {
 	for _, line := range sample.Sample {
 		fmt.Println(line)
 	}
 }
 
-// shuffleAlgothithm235 implements the  "Algorithm 235: Random permutation" by Richard Durstenfeld.
+// Shuffle235 randomly shuffles an array in place using:
 // http://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
-func (sample *PercentageSample) shuffleAlgorithm235() {
+func Shuffle235(well []string, count int) {
 	var choice int
 	var old string
-	for i := sample.WellSeen - 1; i > 1; i-- {
+
+	for i := count - 1; i > 1; i-- {
 		choice = rand.Intn(i)
-		old = sample.Well[i]
-		sample.Well[i] = sample.Well[choice]
-		sample.Well[choice] = old
+		old = well[i]
+		well[i] = well[choice]
+		well[choice] = old
 	}
 }
 
+// implements the  "Algorithm 235: Random permutation" by Richard Durstenfeld.
+// http://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
+func (sample *Sample) shuffleAlgorithm235() {
+	Shuffle235(sample.Well, sample.WellSeen)
+}
+
 // add number of shuffled samples from the well to the sample.
-func (sample *PercentageSample) AddPercentageToTotal() {
+func (sample *Sample) AddPercentageToTotal() {
 	sample.shuffleAlgorithm235()
 	sample.keep = int((float64(sample.PercentageKeep) / 100.0) * float64(sample.WellSeen))
 	for i := 0; i < sample.keep; i++ {
@@ -48,7 +54,7 @@ func (sample *PercentageSample) AddPercentageToTotal() {
 
 // sampleLine is a method that incrementally collects a percentage of all
 // samples seen.
-func (sample *PercentageSample) SampleLine(line string) {
+func (sample *Sample) SampleLine(line string) {
 	if sample.count > 0 && sample.count % sample.WellSize == 0 {
 		// add samples from well
 		sample.AddPercentageToTotal()

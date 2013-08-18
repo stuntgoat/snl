@@ -24,8 +24,8 @@ const (
 	PERCENTAGE
 	)
 
-var INTEGER_SAMPLE *integer_sample.IntegerSample
-var PERCENT_SAMPLE *percent_sample.PercentageSample
+var INTEGER_SAMPLE *integer_sample.Sample
+var PERCENT_SAMPLE *percent_sample.Sample
 
 var command = os.Args[0]
 var invocationFile = fmt.Sprintf("%s [[sample size]%%] [file path]\n", command)
@@ -111,12 +111,12 @@ func main () {
 	parseValue(sampleSize)
 
 	if SAMPLE_TYPE == INTEGER {
-		INTEGER_SAMPLE = &integer_sample.IntegerSample{
+		INTEGER_SAMPLE = &integer_sample.Sample{
 			Sample: make([]string, SAMPLE_VALUE),
 			Size: SAMPLE_VALUE,
 		}
 	} else if SAMPLE_TYPE == PERCENTAGE {
-		PERCENT_SAMPLE = &percent_sample.PercentageSample{
+		PERCENT_SAMPLE = &percent_sample.Sample{
 			Sample: make([]string, 0),
 			PercentageKeep: SAMPLE_VALUE,
 			Well:  make([]string, 0),
