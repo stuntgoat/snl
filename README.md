@@ -12,7 +12,7 @@ I thought it would be fun to write a BASH script to return random lines from a f
 
 [http://www.hilarymason.com/blog/how-to-get-a-random-line-from-a-file-in-bash/](http://www.hilarymason.com/blog/how-to-get-a-random-line-from-a-file-in-bash/)
 
-Once I started looking at their solutions it became clear it would be about as fun to write a program in C that would return N random lines from a file; but that feeling didn't last because I wanted more instant gratification. So this is my attempt at a Go implementation.
+Once I started looking at their solutions it became clear it would be about as fun to write a program in C that would return N random lines from a file; but that feeling didn't last because I wanted more instant gratification. This is my Go implementation.
 
 
 Install:
@@ -22,5 +22,5 @@ Install:
 
 TODO:
 
-      - tests
-      - manpage
+    - tests
+    - manpage
