@@ -106,9 +106,14 @@ func printSample() {
 func main () {
 	var file *os.File
 	var line string
+	if len(os.Args) > 1 {
+		var sampleSize = flag.Arg(0)
+		parseValue(sampleSize)
+	} else {
+		Usage()
+		os.Exit(1)
+	}
 
-	var sampleSize = flag.Arg(0)
-	parseValue(sampleSize)
 
 	if SAMPLE_TYPE == INTEGER {
 		INTEGER_SAMPLE = &integer_sample.Sample{
