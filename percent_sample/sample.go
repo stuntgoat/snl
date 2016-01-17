@@ -11,10 +11,10 @@ type Sample struct {
 	Sample []string // actual sample from all lines seen
 	PercentageKeep int // the percentage of all samples to keep
 	Well []string // the maximum size of the elements to take samples from
-	WellSize int
-	WellSeen int // the total number of new lines in well
-	keep int
-	count int
+	WellSize uint64
+	WellSeen int64 // the total number of new lines in well
+	keep uint64
+	count uint64
 }
 
 func (sample *Sample) Print() {
@@ -25,29 +25,31 @@ func (sample *Sample) Print() {
 
 // Shuffle235 randomly shuffles an array in place using:
 // http://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
-func Shuffle235(well []string, count int) {
-	var choice int
+func Shuffle235(well []string, count int64) []string {
+	var choice int64
 	var old string
 
 	for i := count - 1; i > 1; i-- {
-		choice = rand.Intn(i)
+		choice = rand.Int63n(i)
 		old = well[i]
 		well[i] = well[choice]
 		well[choice] = old
 	}
+	return well
 }
 
 // implements the  "Algorithm 235: Random permutation" by Richard Durstenfeld.
 // http://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
 func (sample *Sample) shuffleAlgorithm235() {
-	Shuffle235(sample.Well, sample.WellSeen)
+	sample.Well = Shuffle235(sample.Well, sample.WellSeen)
 }
 
 // add number of shuffled samples from the well to the sample.
 func (sample *Sample) AddPercentageToTotal() {
 	sample.shuffleAlgorithm235()
-	sample.keep = int((float64(sample.PercentageKeep) / 100.0) * float64(sample.WellSeen))
-	for i := 0; i < sample.keep; i++ {
+	sample.keep = uint64((float64(sample.PercentageKeep) / 100.0) * float64(sample.WellSeen))
+	var i uint64 = 0
+	for i = 0; i < sample.keep; i++ {
 		sample.Sample = append(sample.Sample, sample.Well[i])
 	}
 }
